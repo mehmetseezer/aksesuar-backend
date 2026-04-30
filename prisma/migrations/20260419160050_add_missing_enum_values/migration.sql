@@ -1,0 +1,11 @@
+/*
+  Warnings:
+
+  - The values [FIYAT_GUNCELLEME,STOK_SILME] on the enum `audit_logs_action` will be removed. If these variants are still used in the database, this will fail.
+
+*/
+-- AlterTable
+ALTER TABLE `audit_logs` MODIFY `action` ENUM('PRICE_UPDATE', 'STOCK_DELETE', 'LOGIN', 'LOGOUT', 'EMPLOYEE_CREATE', 'EMPLOYEE_UPDATE', 'EMPLOYEE_DELETE', 'SALE_CREATE', 'SALE_UPDATE', 'SALE_DELETE', 'PURCHASE_CREATE', 'PURCHASE_UPDATE', 'PURCHASE_DELETE', 'PRODUCT_CREATE', 'PRODUCT_UPDATE', 'PRODUCT_DELETE', 'EXPENSE_CREATE', 'RETURN_CREATE', 'TRADE_CREATE') NOT NULL;
+
+-- AlterTable
+ALTER TABLE `cash_transactions` MODIFY `type` ENUM('SALE_INCOME', 'PURCHASE_PAYMENT', 'EXPENSE_OUT', 'CUSTOMER_PAYMENT', 'SUPPLIER_PAYMENT', 'REFUND_OUT') NOT NULL;

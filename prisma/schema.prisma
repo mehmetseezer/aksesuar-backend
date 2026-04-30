@@ -1,0 +1,722 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Company {
+  id                   Int               @id @default(autoincrement())
+  name                 String
+  subdomain            String            @unique
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+  deleted_at           DateTime?
+  is_active            Boolean           @default(true)
+  package_id           Int?
+  subscription_ends_at DateTime?
+  usd_rate             Decimal           @default(0.0000) @db.Decimal(10, 4)
+  auditLogs            AuditLog[]
+  bulkProducts         BulkProduct[]
+  cashRegister         CashRegister?
+  cashTransactions     CashTransaction[]
+  commissionRules      CommissionRule[]
+  package              Package?          @relation(fields: [package_id], references: [id])
+  customers            Customer[]
+  employeeLedgers      EmployeeLedger[]
+  customerLedgers      CustomerLedger[]
+  employees            Employee[]
+  expenses             Expense[]
+  incomes              Income[]
+  purchases            Purchase[]
+  returns              Return[]
+  sales                Sale[]
+  singleDevices        SingleDevice[]
+  stockMovements       StockMovement[]
+  supplierReturns      SupplierReturn[]
+  suppliers            Supplier[]
+  trades               Trade[]
+
+  @@index([package_id], map: "companies_package_id_fkey")
+  @@map("companies")
+}
+
+model Employee {
+  id                 Int              @id @default(autoincrement())
+  company_id         Int
+  name               String
+  email              String
+  password_hash      String
+  role               Role             @default(STAFF)
+  status             EmployeeStatus   @default(ACTIVE)
+  last_login_at      DateTime?
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+  employment_date    DateTime?
+  advance_balance    Decimal          @default(0.00) @db.Decimal(12, 2)
+  commission_balance Decimal          @default(0.00) @db.Decimal(12, 2)
+  salary             Decimal          @default(0.00) @db.Decimal(12, 2)
+  balance            Decimal          @default(0.00) @db.Decimal(12, 2)
+  deleted_at         DateTime?
+  auditLogs          AuditLog[]
+  commissionRules    CommissionRule[]
+  commissions        Commission[]
+  company            Company          @relation(fields: [company_id], references: [id])
+  expenses           Expense[]
+  incomes            Income[]
+  purchases          Purchase[]
+  refreshTokens      RefreshToken[]
+  returns            Return[]
+  sales              Sale[]
+  supplierReturns    SupplierReturn[]
+  trades             Trade[]
+  ledgers            EmployeeLedger[]
+
+  @@unique([company_id, email])
+  @@index([company_id, role])
+  @@map("employees")
+}
+
+model RefreshToken {
+  id          Int      @id @default(autoincrement())
+  token       String   @unique
+  employee_id Int
+  expires_at  DateTime
+  created_at  DateTime @default(now())
+  employee    Employee @relation(fields: [employee_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([employee_id])
+  @@map("refresh_tokens")
+}
+
+model BulkProduct {
+  id                  Int                  @id @default(autoincrement())
+  company_id          Int
+  barcode             String?
+  brand               String
+  model               String?
+  category            String?
+  quantity            Int                  @default(0)
+  purchase_price      Decimal              @db.Decimal(12, 2)
+  selling_price       Decimal              @db.Decimal(12, 2)
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @updatedAt
+  deleted_at          DateTime?
+  company             Company              @relation(fields: [company_id], references: [id])
+  purchaseItems       PurchaseItem[]
+  returnItems         ReturnItem[]
+  saleItems           SaleItem[]
+  stockMovements      StockMovement[]
+  supplierReturnItems SupplierReturnItem[]
+
+  @@unique([company_id, barcode])
+  @@index([company_id, brand, model])
+  @@index([company_id, category])
+  @@map("bulk_products")
+}
+
+model SingleDevice {
+  id                  Int                  @id @default(autoincrement())
+  company_id          Int
+  imei                String?
+  name                String
+  capacity            String?
+  warranty            String?
+  specs               String?
+  battery_health      Int?
+  device_condition    DeviceCondition      @default(USED)
+  condition_note      String?              @db.Text
+  status              DeviceStatus         @default(IN_STOCK)
+  purchase_price      Decimal              @db.Decimal(12, 2)
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @updatedAt
+  deleted_at          DateTime?
+  purchaseItems       PurchaseItem[]
+  returnItems         ReturnItem[]
+  saleItems           SaleItem[]
+  company             Company              @relation(fields: [company_id], references: [id])
+  stockMovements      StockMovement[]
+  supplierReturnItems SupplierReturnItem[]
+
+  @@unique([company_id, imei])
+  @@index([company_id, status])
+  @@index([company_id, imei])
+  @@map("single_devices")
+}
+
+model Sale {
+  id              Int               @id @default(autoincrement())
+  company_id      Int
+  employee_id     Int
+  customer_id     Int?
+  total_amount    Decimal           @db.Decimal(12, 2)
+  paid_amount     Decimal           @db.Decimal(12, 2)
+  profit          Decimal           @db.Decimal(12, 2)
+  trade_id        String?           @unique
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  description     String?           @db.Text
+  status          TransactionStatus @default(COMPLETED)
+  supplier_amount Decimal?          @db.Decimal(12, 2)
+  supplier_id     Int?
+  usd_rate        Decimal           @default(0.0000) @db.Decimal(10, 4)
+  commissions     Commission[]
+  returns         Return[]
+  items           SaleItem[]
+  company         Company           @relation(fields: [company_id], references: [id])
+  customer        Customer?         @relation(fields: [customer_id], references: [id])
+  employee        Employee          @relation(fields: [employee_id], references: [id])
+  supplier        Supplier?         @relation(fields: [supplier_id], references: [id])
+  trade           Trade?
+
+  @@index([company_id, created_at])
+  @@index([employee_id])
+  @@index([customer_id])
+  @@index([supplier_id], map: "sales_supplier_id_fkey")
+  @@map("sales")
+}
+
+model Purchase {
+  id              Int               @id @default(autoincrement())
+  company_id      Int
+  employee_id     Int
+  supplier_id     Int?
+  customer_id     Int?
+  total_amount    Decimal           @db.Decimal(12, 2)
+  paid_amount     Decimal           @db.Decimal(12, 2)
+  trade_id        String?           @unique
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  description     String?           @db.Text
+  status          TransactionStatus @default(COMPLETED)
+  usd_rate        Decimal           @default(0.0000) @db.Decimal(10, 4)
+  items           PurchaseItem[]
+  company         Company           @relation(fields: [company_id], references: [id])
+  customer        Customer?         @relation(fields: [customer_id], references: [id], map: "purchases_cust_rel_fkey")
+  employee        Employee          @relation(fields: [employee_id], references: [id])
+  supplier        Supplier?         @relation(fields: [supplier_id], references: [id])
+  supplierReturns SupplierReturn[]
+  trade           Trade?
+
+  @@index([company_id, created_at])
+  @@index([supplier_id])
+  @@index([customer_id])
+  @@index([employee_id], map: "purchases_employee_id_fkey")
+  @@map("purchases")
+}
+
+model SaleItem {
+  id                Int           @id @default(autoincrement())
+  sale_id           Int
+  quantity          Int           @default(1)
+  unit_price        Decimal       @db.Decimal(12, 2)
+  bulk_product_id   Int?
+  returned_quantity Int           @default(0)
+  single_device_id  Int?
+  status            ItemStatus    @default(NORMAL)
+  returnItems       ReturnItem[]
+  bulkProduct       BulkProduct?  @relation(fields: [bulk_product_id], references: [id])
+  sale              Sale          @relation(fields: [sale_id], references: [id])
+  singleDevice      SingleDevice? @relation(fields: [single_device_id], references: [id])
+
+  @@index([sale_id])
+  @@index([bulk_product_id], map: "sale_items_bulk_product_id_fkey")
+  @@index([single_device_id], map: "sale_items_single_device_id_fkey")
+  @@map("sale_items")
+}
+
+model PurchaseItem {
+  id                  Int                  @id @default(autoincrement())
+  purchase_id         Int
+  quantity            Int                  @default(1)
+  unit_cost           Decimal              @db.Decimal(12, 2)
+  bulk_product_id     Int?
+  returned_quantity   Int                  @default(0)
+  single_device_id    Int?
+  status              ItemStatus           @default(NORMAL)
+  bulkProduct         BulkProduct?         @relation(fields: [bulk_product_id], references: [id])
+  purchase            Purchase             @relation(fields: [purchase_id], references: [id])
+  singleDevice        SingleDevice?        @relation(fields: [single_device_id], references: [id])
+  supplierReturnItems SupplierReturnItem[]
+
+  @@index([purchase_id])
+  @@index([bulk_product_id], map: "purchase_items_bulk_product_id_fkey")
+  @@index([single_device_id], map: "purchase_items_single_device_id_fkey")
+  @@map("purchase_items")
+}
+
+model Return {
+  id            Int               @id @default(autoincrement())
+  company_id    Int
+  sale_id       Int
+  employee_id   Int
+  customer_id   Int?
+  total_amount  Decimal           @db.Decimal(12, 2)
+  refund_amount Decimal           @db.Decimal(12, 2)
+  reason        String?
+  description   String?           @db.Text
+  created_at    DateTime          @default(now())
+  updated_at    DateTime          @updatedAt
+  status        TransactionStatus @default(COMPLETED)
+  usd_rate      Decimal           @default(0.0000) @db.Decimal(10, 4)
+  items         ReturnItem[]
+  company       Company           @relation(fields: [company_id], references: [id])
+  customer      Customer?         @relation(fields: [customer_id], references: [id])
+  employee      Employee          @relation(fields: [employee_id], references: [id])
+  sale          Sale              @relation(fields: [sale_id], references: [id])
+
+  @@index([company_id])
+  @@index([sale_id])
+  @@index([customer_id], map: "returns_customer_id_fkey")
+  @@index([employee_id], map: "returns_employee_id_fkey")
+  @@map("returns")
+}
+
+model ReturnItem {
+  id               Int           @id @default(autoincrement())
+  return_id        Int
+  sale_item_id     Int
+  quantity         Int           @default(1)
+  unit_price       Decimal       @db.Decimal(12, 2)
+  bulk_product_id  Int?
+  single_device_id Int?
+  bulkProduct      BulkProduct?  @relation(fields: [bulk_product_id], references: [id])
+  return           Return        @relation(fields: [return_id], references: [id])
+  saleItem         SaleItem      @relation(fields: [sale_item_id], references: [id])
+  singleDevice     SingleDevice? @relation(fields: [single_device_id], references: [id])
+
+  @@index([bulk_product_id], map: "return_items_bulk_product_id_fkey")
+  @@index([return_id], map: "return_items_return_id_fkey")
+  @@index([sale_item_id], map: "return_items_sale_item_id_fkey")
+  @@index([single_device_id], map: "return_items_single_device_id_fkey")
+  @@map("return_items")
+}
+
+model Trade {
+  id               Int               @id @default(autoincrement())
+  company_id       Int
+  employee_id      Int
+  customer_id      Int
+  sale_id          Int               @unique
+  purchase_id      Int               @unique
+  trade_in_value   Decimal           @db.Decimal(12, 2)
+  sale_total       Decimal           @db.Decimal(12, 2)
+  remaining_amount Decimal           @db.Decimal(12, 2)
+  paid_amount      Decimal           @db.Decimal(12, 2)
+  trade_id         String?           @unique
+  description      String?
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+  status           TransactionStatus @default(COMPLETED)
+  usd_rate         Decimal           @default(0.0000) @db.Decimal(10, 4)
+  company          Company           @relation(fields: [company_id], references: [id])
+  customer         Customer          @relation(fields: [customer_id], references: [id])
+  employee         Employee          @relation(fields: [employee_id], references: [id])
+  purchase         Purchase          @relation(fields: [purchase_id], references: [id])
+  sale             Sale              @relation(fields: [sale_id], references: [id])
+
+  @@index([company_id])
+  @@index([customer_id])
+  @@index([employee_id], map: "trades_employee_id_fkey")
+  @@map("trades")
+}
+
+model CommissionRule {
+  id          Int            @id @default(autoincrement())
+  company_id  Int
+  name        String
+  min_profit  Decimal        @db.Decimal(12, 2)
+  type        CommissionType
+  value       Decimal        @db.Decimal(12, 2)
+  is_active   Boolean        @default(true)
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  employee_id Int?
+  step_amount Decimal?       @db.Decimal(12, 2)
+  step_value  Decimal?       @db.Decimal(12, 2)
+  company     Company        @relation(fields: [company_id], references: [id])
+  employee    Employee?      @relation(fields: [employee_id], references: [id])
+  commissions Commission[]
+
+  @@index([company_id, is_active])
+  @@index([employee_id])
+  @@map("commission_rules")
+}
+
+model Commission {
+  id            Int             @id @default(autoincrement())
+  employee_id   Int
+  sale_id       Int
+  rule_id       Int?
+  rule_snapshot Json?
+  amount        Decimal         @db.Decimal(12, 2)
+  created_at    DateTime        @default(now())
+  employee      Employee        @relation(fields: [employee_id], references: [id])
+  rule          CommissionRule? @relation(fields: [rule_id], references: [id])
+  sale          Sale            @relation(fields: [sale_id], references: [id])
+
+  @@index([employee_id])
+  @@index([sale_id])
+  @@index([rule_id], map: "commissions_rule_id_fkey")
+  @@map("commissions")
+}
+
+model Expense {
+  id          Int       @id @default(autoincrement())
+  company_id  Int
+  employee_id Int?
+  title       String
+  amount      Decimal   @db.Decimal(12, 2)
+  category    String    @default("GENEL")
+  description String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+  usd_rate    Decimal   @default(0.0000) @db.Decimal(10, 4)
+  company     Company   @relation(fields: [company_id], references: [id])
+  employee    Employee? @relation(fields: [employee_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([employee_id], map: "expenses_employee_id_fkey")
+  @@map("expenses")
+}
+
+model Income {
+  id          Int       @id @default(autoincrement())
+  company_id  Int
+  employee_id Int?
+  title       String
+  amount      Decimal   @db.Decimal(12, 2)
+  category    String    @default("GENEL")
+  description String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+  usd_rate    Decimal   @default(0.0000) @db.Decimal(10, 4)
+  company     Company   @relation(fields: [company_id], references: [id])
+  employee    Employee? @relation(fields: [employee_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([employee_id], map: "incomes_employee_id_fkey")
+  @@map("incomes")
+}
+
+model CashRegister {
+  id           Int               @id @default(autoincrement())
+  company_id   Int               @unique
+  balance      Decimal           @default(0.00) @db.Decimal(12, 2)
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  company      Company           @relation(fields: [company_id], references: [id])
+  transactions CashTransaction[]
+
+  @@map("cash_registers")
+}
+
+model CashTransaction {
+  id               Int                 @id @default(autoincrement())
+  company_id       Int
+  cash_register_id Int
+  type             CashTransactionType
+  amount           Decimal             @db.Decimal(12, 2)
+  reference_id     Int?
+  description      String?
+  created_at       DateTime            @default(now())
+  cashRegister     CashRegister        @relation(fields: [cash_register_id], references: [id])
+  company          Company             @relation(fields: [company_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([cash_register_id])
+  @@map("cash_transactions")
+}
+
+model Customer {
+  id          Int        @id @default(autoincrement())
+  company_id  Int
+  name        String
+  phone       String
+  identity_no String?
+  balance     Decimal    @default(0.00) @db.Decimal(12, 2)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  deleted_at  DateTime?
+  company     Company    @relation(fields: [company_id], references: [id])
+  purchases   Purchase[]
+  returns     Return[]
+  sales       Sale[]
+  trades      Trade[]
+  ledgers     CustomerLedger[]
+
+  @@unique([company_id, phone])
+  @@index([company_id, name])
+  @@map("customers")
+}
+
+model Supplier {
+  id              Int              @id @default(autoincrement())
+  company_id      Int
+  name            String
+  phone           String?
+  total_debt      Decimal          @default(0.00) @db.Decimal(12, 2)
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+  deleted_at      DateTime?
+  purchases       Purchase[]
+  sales           Sale[]
+  supplierReturns SupplierReturn[]
+  company         Company          @relation(fields: [company_id], references: [id])
+
+  @@index([company_id, name])
+  @@map("suppliers")
+}
+
+model AuditLog {
+  id          Int         @id @default(autoincrement())
+  company_id  Int
+  employee_id Int
+  action      AuditAction
+  entity      String
+  entity_id   Int?
+  old_value   Json?
+  new_value   Json?
+  created_at  DateTime    @default(now())
+  company     Company     @relation(fields: [company_id], references: [id])
+  employee    Employee    @relation(fields: [employee_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([employee_id])
+  @@map("audit_logs")
+}
+
+model StockMovement {
+  id               Int           @id @default(autoincrement())
+  company_id       Int
+  type             MovementType
+  quantity         Int
+  reason           String?
+  created_at       DateTime      @default(now())
+  bulk_product_id  Int?
+  single_device_id Int?
+  bulkProduct      BulkProduct?  @relation(fields: [bulk_product_id], references: [id])
+  company          Company       @relation(fields: [company_id], references: [id])
+  singleDevice     SingleDevice? @relation(fields: [single_device_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([bulk_product_id])
+  @@index([single_device_id])
+  @@map("stock_movements")
+}
+
+model SupplierReturn {
+  id                Int                  @id @default(autoincrement())
+  company_id        Int
+  supplier_id       Int
+  employee_id       Int
+  purchase_id       Int?
+  total_amount      Decimal              @db.Decimal(12, 2)
+  received_amount   Decimal              @db.Decimal(12, 2)
+  reason            String?
+  description       String?              @db.Text
+  created_at        DateTime             @default(now())
+  updated_at        DateTime             @updatedAt
+  status            TransactionStatus    @default(COMPLETED)
+  usd_rate          Decimal              @default(0.0000) @db.Decimal(10, 4)
+  received_currency String               @default("TL")
+  items             SupplierReturnItem[]
+  company           Company              @relation(fields: [company_id], references: [id])
+  employee          Employee             @relation(fields: [employee_id], references: [id])
+  purchase          Purchase?            @relation(fields: [purchase_id], references: [id])
+  supplier          Supplier             @relation(fields: [supplier_id], references: [id])
+
+  @@index([company_id])
+  @@index([supplier_id])
+  @@index([employee_id], map: "supplier_returns_employee_id_fkey")
+  @@index([purchase_id], map: "supplier_returns_purchase_id_fkey")
+  @@map("supplier_returns")
+}
+
+model SupplierReturnItem {
+  id                 Int            @id @default(autoincrement())
+  supplier_return_id Int
+  purchase_item_id   Int?
+  bulk_product_id    Int?
+  single_device_id   Int?
+  quantity           Int            @default(1)
+  unit_price         Decimal        @db.Decimal(12, 2)
+  bulkProduct        BulkProduct?   @relation(fields: [bulk_product_id], references: [id])
+  purchaseItem       PurchaseItem?  @relation(fields: [purchase_item_id], references: [id])
+  singleDevice       SingleDevice?  @relation(fields: [single_device_id], references: [id])
+  supplierReturn     SupplierReturn @relation(fields: [supplier_return_id], references: [id])
+
+  @@index([bulk_product_id], map: "supplier_return_items_bulk_product_id_fkey")
+  @@index([purchase_item_id], map: "supplier_return_items_purchase_item_id_fkey")
+  @@index([single_device_id], map: "supplier_return_items_single_device_id_fkey")
+  @@index([supplier_return_id], map: "supplier_return_items_supplier_return_id_fkey")
+  @@map("supplier_return_items")
+}
+
+model SystemAdmin {
+  id            Int      @id @default(autoincrement())
+  name          String
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("system_admins")
+}
+
+model Package {
+  id            Int       @id @default(autoincrement())
+  name          String
+  price         Decimal   @db.Decimal(12, 2)
+  max_employees Int       @default(1)
+  max_products  Int       @default(100)
+  features      Json?
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  companies     Company[]
+
+  @@map("packages")
+}
+
+model SystemAnnouncement {
+  id         Int      @id @default(autoincrement())
+  title      String
+  content    String   @db.Text
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("system_announcements")
+}
+
+model EmployeeLedger {
+  id           Int        @id @default(autoincrement())
+  employee_id  Int
+  company_id   Int
+  type         LedgerType
+  amount       Decimal    @db.Decimal(12, 2)
+  reference_id Int?
+  description  String?    @db.Text
+  created_at   DateTime   @default(now())
+  company      Company    @relation(fields: [company_id], references: [id])
+  employee     Employee   @relation(fields: [employee_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([employee_id])
+  @@index([company_id])
+  @@map("employee_ledgers")
+}
+
+model CustomerLedger {
+  id           Int        @id @default(autoincrement())
+  company_id   Int
+  customer_id  Int
+  type         LedgerType
+  amount       Decimal    @db.Decimal(12, 2)
+  reference_id Int?
+  description  String?    @db.Text
+  created_at   DateTime   @default(now())
+  company      Company    @relation(fields: [company_id], references: [id])
+  customer     Customer   @relation(fields: [customer_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([customer_id])
+  @@map("customer_ledgers")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum DeviceStatus {
+  IN_STOCK
+  SOLD
+  REPAIR
+  RETURNED
+}
+
+enum DeviceCondition {
+  NEW
+  USED
+  DISPLAY
+}
+
+enum CommissionType {
+  PERCENTAGE
+  STATIC
+  TIERED
+  DAILY_PROFIT_PERCENTAGE
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CashTransactionType {
+  SALE_INCOME
+  PURCHASE_PAYMENT
+  EXPENSE_OUT
+  CUSTOMER_PAYMENT
+  SUPPLIER_PAYMENT
+  REFUND_OUT
+  OTHER_INCOME
+}
+
+enum ItemStatus {
+  NORMAL
+  RETURNED
+  PARTIALLY_RETURNED
+}
+
+enum TransactionStatus {
+  COMPLETED
+  RETURNED
+  PARTIALLY_RETURNED
+  CANCELLED
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  REGISTER
+  EMPLOYEE_CREATE
+  EMPLOYEE_UPDATE
+  EMPLOYEE_DELETE
+  SALE_CREATE
+  SALE_UPDATE
+  SALE_DELETE
+  PURCHASE_CREATE
+  EXPENSE_CREATE
+  EXPENSE_DELETE
+  INCOME_CREATE
+  INCOME_DELETE
+  PRICE_UPDATE
+  STOCK_ADJUSTMENT
+}
+
+enum LedgerType {
+  SALARY
+  SALARY_PAYMENT
+  COMMISSION
+  ADVANCE
+  EXPENSE
+  SALE
+  CUSTOMER_PAYMENT
+  RETURN
+  ADJUSTMENT
+}
